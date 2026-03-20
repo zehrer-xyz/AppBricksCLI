@@ -1,0 +1,10 @@
+name = "chatgpt"
+
+[runtime]
+head_module = "console"
+
+[module.console]
+type = "console"
+
+[module.chatgpt_admin]
+type = "chatgpt_agent"

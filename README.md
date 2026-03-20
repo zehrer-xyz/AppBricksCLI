@@ -32,17 +32,17 @@ The actual behavior is defined by:
 The same binary can be called under different names:
 
 ```bash
-matterctl
-bthomectl
+appbricks
 shellyctl
-dorf
+chatgpt
+claude
 ```
 
 These are typically implemented via symlinks:
 
 ```bash
-ln -s appbricks matterctl
-ln -s appbricks bthomectl
+ln -s appbricks chatgpt
+ln -s appbricks claude
 ```
 
 ---
@@ -52,13 +52,13 @@ ln -s appbricks bthomectl
 The CLI determines how it was invoked:
 
 ```text
-argv[0] → "matterctl"
+argv[0] → "chatgpt"
 ```
 
 This maps to a profile:
 
 ```text
-matterctl → matterctl.toml
+chatgpt → chatgpt.toml
 ```
 
 ---
@@ -68,26 +68,36 @@ matterctl → matterctl.toml
 Each profile defines:
 
 * which **modules** to load
-* which **commands** are available
+* which module is the **head module**
 * how modules are wired together
 
 Example:
 
 ```toml
-name = "matterctl"
+name = "appbricks"
+
+[runtime]
+head_module = "console"
+
+[module.console]
+type = "console"
+
+[module.chatgpt_admin]
+type = "chatgpt_agent"
+
+[module.claude_admin]
+type = "claude_agent"
 
 [module.discovery]
 type = "mdns"
-
-[module.matter]
-type = "matter"
-
-[commands.scan]
-handler = "discovery.scan"
-
-[commands.devices]
-handler = "matter.list"
 ```
+
+In this model, modules register their own commands:
+
+* `console` owns the default REPL experience
+* `mdns` contributes `scan`
+* `chatgpt_agent` contributes `agent-chatgpt`
+* `claude_agent` contributes `agent-claude`
 
 ---
 
@@ -97,8 +107,8 @@ At startup:
 
 1. Load profile config
 2. Instantiate modules via registry
-3. Register commands
-4. Start runtime
+3. Ask each loaded module to register its commands
+4. Start the head module when no explicit command is provided
 
 The CLI behavior is fully defined by configuration.
 
@@ -146,13 +156,15 @@ Modules are the building blocks of the system.
 
 Each module:
 
-* has a **type** (e.g. `mdns`, `matter`, `bthome`)
+* has a **type** (e.g. `console`, `mdns`, `chatgpt_agent`)
 * is instantiated from config
 * can:
 
   * expose commands
   * provide services
   * interact with other modules
+
+One module can be designated as the **head module** for the profile. That module owns the default startup flow, such as a REPL or operator console.
 
 Modules should be:
 
@@ -174,11 +186,11 @@ Modules should be:
 
 ## 📦 Example Use Cases
 
-* IoT tooling (Matter, Shelly, BTHome)
 * Network discovery tools
 * Gateway controllers
-* Automation CLIs
+* Automation CLIs with a built-in operator console
 * DevOps utilities with multiple roles
+* AI-assisted admin consoles with provider-specific entrypoints
 
 ---
 
@@ -193,13 +205,42 @@ cargo build --release
 ### Create a command via symlink
 
 ```bash
-ln -s ./target/release/appbricks ./matterctl
+ln -s ./target/release/appbricks ./chatgpt
+ln -s ./target/release/appbricks ./claude
 ```
 
-### Run
+### Run the default REPL
 
 ```bash
-./matterctl scan
+./appbricks
+```
+
+Inside the REPL:
+
+```text
+appbricks> help
+appbricks> commands
+appbricks> scan
+appbricks> agent list
+appbricks> agent chatgpt
+appbricks> agent claude
+appbricks> exit
+```
+
+Or call commands directly:
+
+```bash
+./appbricks scan
+./appbricks agent-chatgpt
+```
+
+Provider-focused symlinks can expose narrower profiles:
+
+```bash
+./chatgpt
+./chatgpt agent-chatgpt
+./claude
+./claude agent-claude
 ```
 
 ---
@@ -216,7 +257,8 @@ appbricks-cli/
 │   └── config/
 ├── configs/
 │   ├── default.toml
-│   ├── matterctl.toml
+│   ├── chatgpt.toml
+│   ├── claude.toml
 │   └── shellyctl.toml
 └── Cargo.toml
 ```
@@ -258,6 +300,8 @@ Focus areas:
 
 * module system
 * config schema
+* REPL experience
+* AI agent provider integrations
 * runtime orchestration
 * developer experience
 

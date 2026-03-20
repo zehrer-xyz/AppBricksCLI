@@ -1,0 +1,10 @@
+name = "claude"
+
+[runtime]
+head_module = "console"
+
+[module.console]
+type = "console"
+
+[module.claude_admin]
+type = "claude_agent"
